@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Timesheet – Day Labour Only</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3 {
+            text-align: left;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 5px;
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            color: #444;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .day-container {
+            margin-top: 15px;
+        }
+        .day-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .day-checkbox {
+            margin-right: 15px;
+            width: auto;
+        }
+        .day-label {
+            width: 100px;
+            margin-right: 15px;
+        }
+        .hours-select {
+            flex-grow: 1;
+            min-width: 150px;
+        }
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1a252f;
+        }
+        .policy-box {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .required:after {
+            content: " *";
+            color: red;
+        }
+        #success-message {
+            display: none;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        #error-message {
+            display: none;
+            background-color: #f44336;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+    </style>
+    <!-- Add EmailJS library -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+        // Initialize EmailJS with your Public Key
+        (function() {
+            emailjs.init('VP9oAuwgPuMbNiXqS');
+        })();
+        
+        function sendEmail(event) {
+            event.preventDefault();
+            
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            
+            // Hide any previous messages
+            document.getElementById('success-message')?.remove();
+            document.getElementById('error-message')?.remove();
+            
+            // Prepare form data
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            // Collect worked days and hours
+            const daysWorked = [];
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            
+            days.forEach(day => {
+                const checkbox = document.getElementById(`day_${day}`);
+                if (checkbox.checked) {
+                    const hours = document.getElementById(`hours_${day}`).value;
+                    daysWorked.push({ day, hours });
+                }
+            });
+            
+            // Format the email content
+            let emailBody = `
+                <h2>New Timesheet Submission</h2>
+                <h3>Worker Details</h3>
+                <p><strong>Name:</strong> ${formData.get('First-Name')} ${formData.get('Last-Name')}</p>
+                <p><strong>Position:</strong> ${formData.get('Position')}</p>
+                <p><strong>Site/Project:</strong> ${formData.get('Site')}</p>
+                <p><strong>Company:</strong> ${formData.get('Company')}</p>
+                <p><strong>Phone:</strong> ${formData.get('Phone')}</p>
+                <p><strong>Email:</strong> ${formData.get('Email')}</p>
+                
+                <h3>Hours Worked</h3>
+            `;
+            
+            if (daysWorked.length > 0) {
+                daysWorked.forEach(day => {
+                    emailBody += `<p><strong>${day.day}:</strong> ${day.hours} hours</p>`;
+                });
+            } else {
+                emailBody += `<p>No days were selected</p>`;
+            }
+            
+            emailBody += `
+                <h3>Supervisor Status</h3>
+                <p>${formData.get('Supervisor-Status')}</p>
+                
+                <h3>Confirmation Date</h3>
+                <p>${formData.get('Date')}</p>
+                
+                <p><em>This submission was sent via the online timesheet system.</em></p>
+            `;
+            
+            // Send email using EmailJS
+            emailjs.send('service_dpag4bo', 'template_wa7rpli', {
+                to_email: formData.get('Email'),
+                from_name: 'Timesheet System',
+                subject: 'Timesheet Submission Confirmation',
+                message: emailBody,
+                reply_to: 'accounts@company.com',
+                worker_name: `${formData.get('First-Name')} ${formData.get('Last-Name')}`,
+                position: formData.get('Position'),
+                site: formData.get('Site'),
+                company: formData.get('Company'),
+                supervisor_status: formData.get('Supervisor-Status'),
+                submission_date: formData.get('Date'),
+                hours_worked: daysWorked.map(day => `${day.day}: ${day.hours} hours`).join('\n')
+            })
+            .then(function(response) {
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.id = 'success-message';
+                successMsg.textContent = 'Timesheet submitted successfully! A confirmation has been sent to your email.';
+                successMsg.style.display = 'block';
+                form.appendChild(successMsg);
+                
+                // Reset form after 3 seconds
+                setTimeout(() => {
+                    form.reset();
+                    successMsg.remove();
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Timesheet';
+                    // Reset today's date
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('Date').value = today;
+                }, 3000);
+            }, function(error) {
+                // Show error message
+                const errorMsg = document.createElement('div');
+                errorMsg.id = 'error-message';
+                errorMsg.textContent = 'Failed to send timesheet. Please try again or contact support.';
+                errorMsg.style.display = 'block';
+                form.appendChild(errorMsg);
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Timesheet';
+            });
+        }
+        
+        // Initialize the form on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add required class to labels
+            const requiredLabels = document.querySelectorAll('label[for="First-Name"], label[for="Last-Name"], label[for="Position"], label[for="Site"], label[for="Company"], label[for="Phone"], label[for="Email"], label[for="Supervisor-Status"], label[for="Date"]');
+            requiredLabels.forEach(label => {
+                label.classList.add('required');
+            });
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('Date').value = today;
+            
+            // Add click handlers to day checkboxes to make entire row clickable
+            document.querySelectorAll('.day-row').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+                        const checkbox = this.querySelector('.day-checkbox');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>ONLINE TIMESHEET – DAY LABOUR ONLY</h2>
+        <h3>Worker Details</h3>
+        <form onsubmit="sendEmail(event)">
+            <label for="First-Name">First Name</label>
+            <input type="text" id="First-Name" name="First-Name" required>
+            
+            <label for="Last-Name">Last Name</label>
+            <input type="text" id="Last-Name" name="Last-Name" required>
+            
+            <label for="Position">Position</label>
+            <select id="Position" name="Position" required>
+                <option value="">Select Position...</option>
+                <option value="Steel Fixer">STEEL FIXER</option>
+                <option value="Leading Hand">LEADING HAND</option>
+                <option value="Foreman">FOREMAN</option>
+                <option value="Site Supervisor">SITE SUPERVISOR</option>
+                <option value="Dogman">DOGMAN</option>
+                <option value="Concreter">CONCRETER</option>
+                <option value="Apprentice Steel Fixer">APPRENTICE STEEL FIXER</option>
+                <option value="General Labourer">GENERAL LABOURER</option>
+                <option value="Other">Other</option>
+            </select>
+            
+            <label for="Site">Site / Project</label>
+            <input type="text" id="Site" name="Site" required>
+            
+            <label for="Company">Company (Builder/Contractor)</label>
+            <input type="text" id="Company" name="Company" required>
+            
+            <label for="Phone">Phone</label>
+            <input type="tel" id="Phone" name="Phone" required>
+            
+            <label for="Email">Email</label>
+            <input type="email" id="Email" name="Email" required>
+            
+            <h3>Hours Worked</h3>
+            <label>Days Worked</label>
+            <div class="day-container">
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Monday" name="Day" value="Monday">
+                    <label for="day_Monday" class="day-label">Monday</label>
+                    <select class="hours-select" name="Hours_Monday" id="hours_Monday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Tuesday" name="Day" value="Tuesday">
+                    <label for="day_Tuesday" class="day-label">Tuesday</label>
+                    <select class="hours-select" name="Hours_Tuesday" id="hours_Tuesday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Wednesday" name="Day" value="Wednesday">
+                    <label for="day_Wednesday" class="day-label">Wednesday</label>
+                    <select class="hours-select" name="Hours_Wednesday" id="hours_Wednesday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Thursday" name="Day" value="Thursday">
+                    <label for="day_Thursday" class="day-label">Thursday</label>
+                    <select class="hours-select" name="Hours_Thursday" id="hours_Thursday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Friday" name="Day" value="Friday">
+                    <label for="day_Friday" class="day-label">Friday</label>
+                    <select class="hours-select" name="Hours_Friday" id="hours_Friday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Saturday" name="Day" value="Saturday">
+                    <label for="day_Saturday" class="day-label">Saturday</label>
+                    <select class="hours-select" name="Hours_Saturday" id="hours_Saturday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+                
+                <div class="day-row">
+                    <input type="checkbox" class="day-checkbox" id="day_Sunday" name="Day" value="Sunday">
+                    <label for="day_Sunday" class="day-label">Sunday</label>
+                    <select class="hours-select" name="Hours_Sunday" id="hours_Sunday">
+                        <option value="">Select hours</option>
+                        <option value="3">3.0 hours</option>
+                        <option value="3.5">3.5 hours</option>
+                        <option value="4">4.0 hours</option>
+                        <option value="4.5">4.5 hours</option>
+                        <option value="5">5.0 hours</option>
+                        <option value="5.5">5.5 hours</option>
+                        <option value="6">6.0 hours</option>
+                        <option value="6.5">6.5 hours</option>
+                        <option value="7">7.0 hours</option>
+                        <option value="7.5">7.5 hours</option>
+                        <option value="8">8.0 hours</option>
+                        <option value="8.5">8.5 hours</option>
+                        <option value="9">9.0 hours</option>
+                        <option value="9.5">9.5 hours</option>
+                        <option value="10">10.0 hours</option>
+                        <option value="10.5">10.5 hours</option>
+                        <option value="11">11.0 hours</option>
+                        <option value="11.5">11.5 hours</option>
+                        <option value="12">12.0 hours</option>
+                        <option value="12.5">12.5 hours</option>
+                        <option value="13">13.0 hours</option>
+                        <option value="13.5">13.5 hours</option>
+                        <option value="14">14.0 hours</option>
+                    </select>
+                </div>
+            </div>
+
+            <h3>Supervisor</h3>
+            <label for="Supervisor-Status">Supervisor Status</label>
+            <select id="Supervisor-Status" name="Supervisor-Status" required>
+                <option value="">Please Select</option>
+                <option value="Supervisor is on site">Supervisor is on site</option>
+                <option value="Supervisor is not available">Supervisor is not available</option>
+                <option value="Supervisor is not on site">Supervisor is not on site</option>
+            </select>
+            
+            <h3>Confirmation</h3>
+            <label>
+                <input type="checkbox" required> 
+                <span class="required">I agree to the timesheet submission policy</span>
+            </label>
+            <div class="policy-box">
+                The Worker confirms that the details provided are true and correct, and that any reported time worked confirms any variance from advised hours if applicable.<br>
+                The Worker understands that submitting reportable time worked after midnight on Tuesday may result in a delayed payment of at least 5 business days.<br>
+                The Worker understands that submitting incorrect or false details will result in reportable time being rejected.<br>
+                The Worker has a full understanding of the terms, policies, and procedures of employment.<br>
+                The Worker confirms that he/she had no health and safety concerns on site.<br>
+                The Worker confirms that job duties did not vary from the assigned duties.<br>
+                The Worker confirms that he/she was not involved in, nor a witness to, any incident on site.
+            </div>
+            
+            <h3>Confirmation Date</h3>
+            <label for="Date">Date</label>
+            <input type="date" id="Date" name="Date" required>
+            
+            <button type="submit">Submit Timesheet</button>
+        </form>
+    </div>
+</body>
+</html>
