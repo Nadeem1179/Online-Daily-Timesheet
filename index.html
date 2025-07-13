@@ -237,7 +237,8 @@
             // Add click handlers to day checkboxes to make entire row clickable
             document.querySelectorAll('.day-row').forEach(row => {
                 row.addEventListener('click', function(e) {
-                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+                    // Prevent double toggling when clicking the label
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'LABEL') {
                         const checkbox = this.querySelector('.day-checkbox');
                         checkbox.checked = !checkbox.checked;
                     }
