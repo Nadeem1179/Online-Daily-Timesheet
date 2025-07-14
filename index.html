@@ -177,12 +177,12 @@
             `;
             
             // Send email using EmailJS
-            emailjs.send('service_dpag4bo', 'template_wa7rpli', {
+            emailjs.send('service_dpag4bo', 'template_w18qryd', {
                 to_email: formData.get('Email'),
                 from_name: 'Timesheet System',
-                subject: 'Timesheet Submission Confirmation',
+                subject: ' Day Labour Timesheet Submission Confirmation',
                 message: emailBody,
-                reply_to: 'accounts@company.com',
+                reply_to: 'accounts@positivereo.com.au',
                 worker_name: `${formData.get('First-Name')} ${formData.get('Last-Name')}`,
                 position: formData.get('Position'),
                 site: formData.get('Site'),
